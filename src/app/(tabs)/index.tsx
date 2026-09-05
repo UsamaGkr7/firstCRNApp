@@ -6,6 +6,7 @@ export default function Home() {
     <View style={styles.container}>
       <Text>Home Screen</Text>
       <Link href="/details">Go to details</Link>
+      <Link href={"/users/1"}>Go to Post Id</Link>
     </View>
   );
 }

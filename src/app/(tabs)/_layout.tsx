@@ -10,19 +10,20 @@ export default function TabsLayout() {
       }}
     >
       <Tabs.Screen
-        name="index"
-        options={{
-          title: "Home",
-          tabBarLabel: "Home",
-        }}
-      />
-      <Tabs.Screen
         name="details"
         options={{
           title: "Details",
           tabBarLabel: "Details",
         }}
       />
+      <Tabs.Screen
+        name="index"
+        options={{
+          title: "Home",
+          tabBarLabel: "Home",
+        }}
+      />
+
       <Tabs.Screen
         name="profile"
         options={{
