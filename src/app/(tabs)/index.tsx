@@ -1,115 +1,180 @@
-import * as SecureStore from "expo-secure-store";
+import { Directory, File, Paths } from "expo-file-system";
+import { fetch } from "expo/fetch";
 import { useState } from "react";
-import { Alert, Button, StyleSheet, Text, TextInput, View } from "react-native";
+import { Button, ScrollView, StyleSheet, Text, View } from "react-native";
 
-export default function Home() {
-  const [username, setUsername] = useState("");
-  const [password, setPassword] = useState("");
+const Index = () => {
+  const [logs, setLogs] = useState<string[]>([]);
+  const [loading, setLoading] = useState(false);
 
-  const onSave = async () => {
+  const addLog = (message: string) => {
+    setLogs((prev) => [...prev, `${message}`]);
+  };
+
+  const createAndReadFile = async () => {
     try {
-      if (!username || !password) {
-        Alert.alert("Error", "Please fill in both fields");
-        return;
-      }
+      const file = new File(Paths.document, "hello.txt");
 
-      await SecureStore.setItemAsync("username", username);
-      await SecureStore.setItemAsync("password", password);
-      Alert.alert("Success", "Credentials saved successfully");
+      // file.create();
+      file.write("Suraj from this side");
 
-      // Clear inputs after saving
-      setUsername("");
-      setPassword("");
+      const content = await file.text();
+
+      addLog(`File created & read: "${content}"`);
     } catch (error) {
-      Alert.alert("Error", "Failed to save credentials");
-      console.error(error);
+      addLog(`❌ Error: ${error.message}`);
     }
   };
 
-  const onShow = async () => {
+  const readAsBase64 = async () => {
     try {
-      const showUsername = await SecureStore.getItemAsync("username");
-      const showPassword = await SecureStore.getItemAsync("password");
+      const file = new File(Paths.document, "base64-test.txt");
+      file.create();
+      file.write("Convert me to base64");
 
-      if (showUsername && showPassword) {
-        Alert.alert(
-          "Success",
-          `Username: ${showUsername}\nPassword: ${showPassword}`,
-        );
-      } else {
-        Alert.alert("Info", "No credentials found");
-      }
+      const base64 = await file.base64();
+      addLog(`File created & read: "${base64.substring(0, 30)}"`);
     } catch (error) {
-      Alert.alert("Error", "Failed to retrieve credentials");
-      console.error(error);
+      addLog(`❌ Error: ${error.message}`);
     }
   };
 
-  const onClear = async () => {
+  const deleteFile = () => {
+    const file = new File(Paths.document, "delete-me.txt");
+    file.create();
+    file.write("Delete Me");
+
+    file.delete();
+  };
+
+  const copyFile = () => {
+    const original = new File(Paths.document, "original.txt");
+
+    if (!original.exists) {
+      original.create();
+      original.write("Original content");
+    }
+
+    const copy = new File(Paths.cache, "cpoy.txt");
+    original.copy(copy);
+  };
+
+  const listDirectory = () => {
     try {
-      await SecureStore.deleteItemAsync("username");
-      await SecureStore.deleteItemAsync("password");
-      setUsername("");
-      setPassword("");
-      Alert.alert("Success", "Credentials cleared successfully");
+      const dir = new Directory(Paths.document);
+      const items = dir.list();
+
+      addLog(`✅ Found ${items.length} items:`);
+    } catch (error) {}
+  };
+
+  const uploadFile = async () => {
+    setLoading(true);
+    try {
+      const file = new File(Paths.cache, "upload.txt");
+      file.create();
+      file.write("Upload this content");
+
+      const formData = new FormData();
+
+      formData.append("file", file);
+
+      const response = await fetch("https://httpbin.org/post", {
+        method: "POST",
+        body: formData,
+      });
+
+      addLog(`✅ Uploaded! Status: ${response.status}`);
     } catch (error) {
-      Alert.alert("Error", "Failed to clear credentials");
-      console.error(error);
+      addLog(`❌ Error: ${error.message}`);
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Home Screen</Text>
+      <Text style={styles.header}>📦 FileSystem Operations</Text>
 
-      <TextInput
-        placeholder="Username"
-        value={username}
-        onChangeText={setUsername}
-        style={styles.input}
-        autoCapitalize="none"
-      />
+      <ScrollView style={styles.buttonsContainer}>
+        <View style={styles.row}>
+          <Button title="1. Create & Read" onPress={createAndReadFile} />
+          <Button title="2. Base64" onPress={readAsBase64} />
+        </View>
 
-      <TextInput
-        placeholder="Password"
-        value={password}
-        onChangeText={setPassword}
-        secureTextEntry={true}
-        style={styles.input}
-      />
+        <View style={styles.row}>
+          <Button title="3. List Dir" onPress={listDirectory} />
+          <Button title="4. Upload" onPress={uploadFile} />
+        </View>
+      </ScrollView>
 
-      <Button onPress={onSave} title="Save Credentials" />
-      <View style={styles.spacing} />
-
-      <Button onPress={onShow} title="Show Credentials" />
-      <View style={styles.spacing} />
-
-      <Button onPress={onClear} title="Clear Credentials" />
+      <View style={styles.logsContainer}>
+        <Text style={styles.logsHeader}>📋 Operation Logs:</Text>
+        <ScrollView style={styles.logsScroll}>
+          {logs.map((log, index) => (
+            <Text key={index} style={styles.logText}>
+              {log}
+            </Text>
+          ))}
+        </ScrollView>
+      </View>
     </View>
   );
-}
+};
+
+export default Index;
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
     padding: 20,
+    backgroundColor: "#fff",
+    paddingTop: 50,
   },
-  title: {
+  header: {
     fontSize: 24,
     fontWeight: "bold",
-    marginBottom: 20,
+    textAlign: "center",
+    marginBottom: 15,
   },
-  input: {
-    width: "100%",
-    padding: 15,
-    marginVertical: 10,
-    borderWidth: 1,
-    borderColor: "#ccc",
+  buttonsContainer: {
+    maxHeight: 400,
+    marginBottom: 10,
+  },
+  row: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginBottom: 10,
+    gap: 10,
+  },
+  loadingContainer: {
+    alignItems: "center",
+    padding: 10,
+  },
+  logsContainer: {
+    flex: 1,
+    backgroundColor: "#f5f5f5",
     borderRadius: 8,
+    padding: 10,
+    marginTop: 10,
   },
-  spacing: {
-    marginVertical: 10,
+  logsHeader: {
+    fontWeight: "bold",
+    fontSize: 16,
+    marginBottom: 10,
+  },
+  logsScroll: {
+    flex: 1,
+  },
+  logText: {
+    fontSize: 12,
+    marginBottom: 4,
+    fontFamily: "monospace",
+  },
+  emptyLog: {
+    fontSize: 14,
+    color: "#999",
+    textAlign: "center",
+    marginTop: 20,
   },
 });
