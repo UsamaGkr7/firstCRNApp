@@ -1,11 +1,23 @@
 import { Directory, File, Paths } from "expo-file-system";
+import { Magnetometer } from "expo-sensors";
 import { fetch } from "expo/fetch";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Button, ScrollView, StyleSheet, Text, View } from "react-native";
-
 const Index = () => {
   const [logs, setLogs] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
+  const [direction, setDirection] = useState("UnKnown");
+
+  useEffect(() => {
+    const sub = Magnetometer.addListener(({ x, y, z }) => {
+      if (Math.abs(x) > Math.abs(y)) {
+        setDirection(x > 0 ? "East-ish" : "West-ish");
+      } else {
+        setDirection(y > 0 ? "Nort-ish" : "South-ish");
+      }
+    });
+    return () => sub.remove();
+  }, []);
 
   const addLog = (message: string) => {
     setLogs((prev) => [...prev, `${message}`]);
@@ -100,6 +112,9 @@ const Index = () => {
         <View style={styles.row}>
           <Button title="1. Create & Read" onPress={createAndReadFile} />
           <Button title="2. Base64" onPress={readAsBase64} />
+        </View>
+        <View>
+          <Text> direction : {direction}</Text>
         </View>
 
         <View style={styles.row}>
